@@ -1,0 +1,20 @@
+{
+    "name": "deadpool/tienda_online",
+    "description": "Creacion de una tienda online de artesania",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Eduardo Jeovani Chino Nava",
+            "email": "22251796@uagro.mx"
+        }
+    ],
+    "require": {
+
+    },
+    "autoload": {
+        "psr-4": {
+            "deadpool\\":"src/"
+        }
+    }
+}
