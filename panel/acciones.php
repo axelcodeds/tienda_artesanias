@@ -1,107 +1,112 @@
 <?php
-require '../vendor/autoload.php';
+// Mostrar errores (solo en pruebas)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Cargar autoload (ruta correcta en el hosting)
+require __DIR__ . '/../vendor/autoload.php';
 
 $artesania = new deadpool\artesania;
 
-if($_SERVER['REQUEST_METHOD'] ==='POST'){
+// -----------------------------------------------------------------------------
+// REGISTRAR
+// -----------------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'Registrar') {
 
-    if ($_POST['accion']==='Registrar'){
+    if (empty($_POST['nombre_artesania'])) exit("Completar nombre");
+    if (empty($_POST['descripcion'])) exit("Completar descripción");
+    if (empty($_POST['categoria_id'])) exit("Seleccionar categoría");
+    if (empty($_POST['precio'])) exit("Ingresar precio");
 
-        if(empty($_POST['nombre_artesania']))
-            exit('Completar nombre');
-        
-        if(empty($_POST['descripcion']))
-            exit('Completar descripcion');
+    $_params = [
+        'nombre_artesania' => $_POST['nombre_artesania'],
+        'descripcion'      => $_POST['descripcion'],
+        'foto'             => subirFoto(),
+        'precio'           => $_POST['precio'],
+        'categoria_id'     => $_POST['categoria_id'],
+        'fecha'            => date('Y-m-d'),
+        'estado'           => 1
+    ];
 
-        if(empty($_POST['categoria_id']))
-            exit('Seleccionar una Categoria');
-
-        if(!is_numeric($_POST['categoria_id']))
-            exit('Seleccionar una Categoria válida');
-
-        
-        $_params = array(
-            'nombre_artesania'=>$_POST['nombre_artesania'],
-            'descripcion'=>$_POST['descripcion'],
-            'foto'=> subirFoto(),
-            'precio'=>$_POST['precio'],
-            'categoria_id'=>$_POST['categoria_id'],
-            'fecha'=> date('Y-m-d')
-        );
-        $rpt = $artesania->registrar($_params);
-        if($rpt)
-            header('Location: artesanias/index.php');
-        else
-            print 'Error al registrar la artesania';
-        
-
+    if ($artesania->registrar($_params)) {
+        header("Location: ./artesanias/index.php");
+        exit;
+    } else {
+        exit("Error al registrar");
     }
+}
 
-    if ($_POST['accion']==='Actualizar'){
+// -----------------------------------------------------------------------------
+// ACTUALIZAR
+// -----------------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['accion'] === 'Actualizar') {
 
-        if(empty($_POST['nombre_artesania']))
-        exit('Completar nombre');
-    
-    if(empty($_POST['descripcion']))
-        exit('Completar descripcion');
+    $_params = [
+        'nombre_artesania' => $_POST['nombre_artesania'],
+        'descripcion'      => $_POST['descripcion'],
+        'precio'           => $_POST['precio'],
+        'categoria_id'     => $_POST['categoria_id'],
+        'fecha'            => date('Y-m-d'),
+        'estado'           => 1,
+        'id'               => $_POST['id']
+    ];
 
-    if(empty($_POST['categoria_id']))
-        exit('Seleccionar una Categoria');
+    // Foto anterior
+    $_params['foto'] = $_POST['foto_temp'];
 
-    if(!is_numeric($_POST['categoria_id']))
-        exit('Seleccionar una Categoria válida');
-
-    
-    $_params = array(
-        'nombre_artesania'=>$_POST['nombre_artesania'],
-        'descripcion'=>$_POST['descripcion'],
-        'precio'=>$_POST['precio'],
-        'categoria_id'=>$_POST['categoria_id'],
-        'fecha'=> date('Y-m-d'),
-        'id'=>$_POST['id'],
-    );
-
-    if(!empty($_POST['foto_temp']))
-        $_params['foto'] = $_POST['foto_temp'];
-    
-    if(!empty($_FILES['foto']['name']))
+    // Nueva foto
+    if (!empty($_FILES['foto']['name'])) {
         $_params['foto'] = subirFoto();
-
-    $rpt = $artesania->actualizar($_params);
-    if($rpt)
-        header('Location: artesanias/index.php');
-    else
-        print 'Error al actualizar';
-
     }
 
+    if ($artesania->actualizar($_params)) {
+        header("Location: ./artesanias/index.php");
+        exit;
+    } else {
+        exit("Error al actualizar");
+    }
 }
 
-if($_SERVER['REQUEST_METHOD'] ==='GET'){
+// -----------------------------------------------------------------------------
+// ELIMINAR
+// -----------------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
-    $id = $_GET['id'];
-
-    $rpt = $artesania->eliminar($id);
-    
-    if($rpt)
-        header('Location: artesanias/index.php');
-    else
-        print 'Error al eliminar';
-
-
+    if ($artesania->eliminar($_GET['id'])) {
+        header("Location: ./artesanias/index.php");
+        exit;
+    } else {
+        exit("Error al eliminar");
+    }
 }
 
 
+
+// -----------------------------------------------------------------------------
+// SUBIR FOTO 
+// -----------------------------------------------------------------------------
 function subirFoto() {
 
-    $carpeta = __DIR__.'/../upload/';
+    if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+        return '';
+    }
 
-    $archivo = $carpeta.$_FILES['foto']['name'];
+    // La carpeta estará en: /htdocs/uploads/
+    $carpeta = __DIR__ . '/../upload/';
 
+    // Crear carpeta si no existe
+    if (!file_exists($carpeta)) {
+        mkdir($carpeta, 0775, true);
+    }
 
-    move_uploaded_file($_FILES['foto']['tmp_name'],$archivo);
+    // Nombre único
+    $nombreArchivo = time() . '_' . basename($_FILES['foto']['name']);
+    $rutaDestino = $carpeta . $nombreArchivo;
 
-    return $_FILES['foto']['name'];
+    // Mover archivo subido
+    if (move_uploaded_file($_FILES['foto']['tmp_name'], $rutaDestino)) {
+        return $nombreArchivo;
+    }
 
-
+    return '';
 }
